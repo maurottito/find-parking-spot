@@ -56,14 +56,7 @@ find-parking-spot/
 │
 ├── run_batch_layer.sh                 # Batch layer deployment
 ├── cleanup_and_retry.sh               # Cleanup & retry script
-├── create_availability_only.sh        # Create availability table
-│
-└── Documentation/
-    ├── PROJECT_SUCCESS.md             # Success summary
-    ├── LIVE_CAMERA_README.md          # Live camera guide
-    ├── IMPROVED_DETECTION.md          # Detection tuning
-    ├── FIX_HBASE_TIMEOUT.md           # Troubleshooting
-    └── DEPLOY_FLEXIBLE_DETECTION.md   # Deployment guide
+└── create_availability_only.sh        # Create availability table
 ```
 
 ---
@@ -509,83 +502,3 @@ count 'maurottito_parking_availability'
 # Exit
 exit
 ```
-
----
-
-## Project Structure
-
-```
-find-parking-spot/
-├── README.md                          # This comprehensive guide
-├── requirements.txt                   # Python dependencies
-│
-├── data/
-│   └── parking_locations.csv          # Source data (5 locations)
-│
-├── hive_hbase_spark/
-│   ├── create_parking_locations.hql   # Hive table creation
-│   └── parking_hive_to_hbase.hql      # Hive → HBase transfer
-│
-├── speed_layer/
-│   ├── auto_update_live_camera.py     # Live camera detection service
-│   ├── start_live_camera.sh           # Start script
-│   ├── stop_live_camera.sh            # Stop script
-│   └── status_live_camera.sh          # Status check
-│
-├── parking_spot_app_deploy/
-│   ├── src/
-│   │   ├── app.js                     # Node.js web server
-│   │   ├── package.json               # npm dependencies
-│   │   ├── home.mustache              # Home page template
-│   │   ├── parking-table.mustache     # Parking table template
-│   │   └── public/
-│   │       ├── elegant-aero.css       # Form styling
-│   │       └── table.css              # Table styling
-│   ├── start_app.sh                   # Web app start script
-│   └── logs/                          # Application logs
-│
-├── run_batch_layer.sh                 # Batch layer deployment
-├── cleanup_and_retry.sh               # Cleanup & retry script
-├── create_availability_only.sh        # Create availability table
-│
-└── Documentation/
-    ├── PROJECT_SUCCESS.md             # Success summary
-    ├── LIVE_CAMERA_README.md          # Live camera guide
-    ├── IMPROVED_DETECTION.md          # Detection tuning
-    ├── FIX_HBASE_TIMEOUT.md           # Troubleshooting
-    └── DEPLOY_FLEXIBLE_DETECTION.md   # Deployment guide
-```
-
----
-
-## Key Features
-
-### Real-time Processing
-- Live camera frame extraction every 60 seconds
-- OpenCV-based car detection with edge analysis
-- Immediate HBase updates with fresh connections
-- Sub-second processing time per cycle
-
-### Distributed Storage
-- HBase NoSQL database for scalability
-- Binary encoding for storage efficiency
-- Scalable to millions of parking records
-- HDFS-backed data persistence
-
-### Computer Vision
-- Canny edge detection algorithm
-- Contour analysis for object identification
-- Adaptive thresholding techniques
-- Multi-angle car recognition (0.2-5.0 aspect ratio)
-
-### Production Ready
-- Comprehensive error handling & retry logic
-- Automatic HBase reconnection per update
-- Full logging and audit trail
-- Service management scripts for ops
-
-### Web Interface
-- Real-time data display with auto-refresh
-- Manual update capability via forms
-- Health monitoring endpoints
-- RESTful API for integration
