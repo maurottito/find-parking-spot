@@ -20,6 +20,86 @@ A production-ready parking detection system that:
 - Displays real-time availability on a web interface
 - Updates every 60 seconds automatically
 
+---
+
+## Project Structure
+
+```
+find-parking-spot/
+├── README.md                          # This comprehensive guide
+├── requirements.txt                   # Python dependencies
+│
+├── data/
+│   └── parking_locations.csv          # Source data (5 locations)
+│
+├── hive_hbase_spark/
+│   ├── create_parking_locations.hql   # Hive table creation
+│   └── parking_hive_to_hbase.hql      # Hive → HBase transfer
+│
+├── speed_layer/
+│   ├── auto_update_live_camera.py     # Live camera detection service
+│   ├── start_live_camera.sh           # Start script
+│   ├── stop_live_camera.sh            # Stop script
+│   └── status_live_camera.sh          # Status check
+│
+├── parking_spot_app_deploy/
+│   ├── src/
+│   │   ├── app.js                     # Node.js web server
+│   │   ├── package.json               # npm dependencies
+│   │   ├── home.mustache              # Home page template
+│   │   ├── parking-table.mustache     # Parking table template
+│   │   └── public/
+│   │       ├── elegant-aero.css       # Form styling
+│   │       └── table.css              # Table styling
+│   ├── start_app.sh                   # Web app start script
+│   └── logs/                          # Application logs
+│
+├── run_batch_layer.sh                 # Batch layer deployment
+├── cleanup_and_retry.sh               # Cleanup & retry script
+├── create_availability_only.sh        # Create availability table
+│
+└── Documentation/
+    ├── PROJECT_SUCCESS.md             # Success summary
+    ├── LIVE_CAMERA_README.md          # Live camera guide
+    ├── IMPROVED_DETECTION.md          # Detection tuning
+    ├── FIX_HBASE_TIMEOUT.md           # Troubleshooting
+    └── DEPLOY_FLEXIBLE_DETECTION.md   # Deployment guide
+```
+
+---
+
+## Key Features
+
+### Real-time Processing
+- Live camera frame extraction every 60 seconds
+- OpenCV-based car detection with edge analysis
+- Immediate HBase updates with fresh connections
+- Sub-second processing time per cycle
+
+### Distributed Storage
+- HBase NoSQL database for scalability
+- Binary encoding for storage efficiency
+- Scalable to millions of parking records
+- HDFS-backed data persistence
+
+### Computer Vision
+- Canny edge detection algorithm
+- Contour analysis for object identification
+- Adaptive thresholding techniques
+- Multi-angle car recognition (0.2-5.0 aspect ratio)
+
+### Production Ready
+- Comprehensive error handling & retry logic
+- Automatic HBase reconnection per update
+- Full logging and audit trail
+- Service management scripts for ops
+
+### Web Interface
+- Real-time data display with auto-refresh
+- Manual update capability via forms
+- Health monitoring endpoints
+- RESTful API for integration
+
 
 ---
 
@@ -119,11 +199,6 @@ Stores real-time parking availability (updated by speed layer).
 | location_id | stat | available_spots | Int (binary) | Currently available spots |
 | location_id | stat | last_updated | String | Timestamp of update |
 | location_id | stat | timestamp | Long (binary) | Unix timestamp |
-
-**Binary Encoding:**
-- 4-byte big-endian integers for spot counts
-- 8-byte big-endian long for timestamps
-- Efficient storage and network transfer
 
 ---
 
@@ -248,59 +323,16 @@ chmod +x *.sh
 python3 auto_update_live_camera.py --test
 ```
 
-Expected output:
-```
-OpenCV version: 4.12.0
-Extracting frame from live camera (attempt 1/3)
-Frame extracted successfully (1280x720)
-Advanced detection: 7 cars detected (avg area: 15850)
-Test successful!
-   Detected: 7 cars, 5 spots available
-Connected to HBase at ec2-54-89-237-222.compute-1.amazonaws.com:9090
-HBase update test successful
-```
-
 ### E. Start Live Camera Service
 
 ```bash
 bash start_live_camera.sh
 ```
 
-Expected output:
-```
-Starting live camera parking updates...
-Camera: https://2-fss-2.streamhoster.com/pl_126/200612-1195858-1/playlist.m3u8
-Log: /home/hadoop/maurottito/logs/parking_live_camera.log
-
-Live camera service started (PID: 1215895)
-
-Monitor with:
-  tail -f /home/hadoop/maurottito/logs/parking_live_camera.log
-```
-
 ### F. Monitor Live Updates
 
 ```bash
 tail -f ~/maurottito/logs/parking_live_camera.log
-```
-
-Sample output every 60 seconds:
-```
-======================================================================
-Update #5 - 2025-12-08 22:30:00
-======================================================================
-Extracting frame from live camera (attempt 1/3)
-Frame extracted successfully (1280x720)
-Advanced detection: 7 cars detected (avg area: 15850)
-Camera Analysis:
-   Occupied: 7 cars
-   Available: 5 spots
-   Occupancy Rate: 58.3%
-Connected to HBase at ec2-54-89-237-222.compute-1.amazonaws.com:9090
-HBase updated: Location 1 → 5/12 spots available
-Successfully updated HBase
-Waiting 60 seconds until next update...
-======================================================================
 ```
 
 ---
@@ -388,19 +420,6 @@ The system uses a sophisticated computer vision pipeline:
 8. Count valid cars (0-12 for Millennium Park)
 9. Calculate available spots = total_spots - occupied
 10. Update HBase with binary-encoded values
-
-### Detection Parameters (Optimized)
-
-| Parameter | Value | Purpose |
-|-----------|-------|---------|
-| Camera Stream | HLS 1280x720 | Live Chicago feed |
-| Update Frequency | 60 seconds | Balance accuracy/performance |
-| Min Car Area | 800 pixels | Catch small/distant cars |
-| Max Car Area | 200,000 pixels | Catch large/close cars |
-| Aspect Ratio Range | 0.2 - 5.0 | All car viewing angles |
-| Canny Low Threshold | 30 | Edge sensitivity |
-| Canny High Threshold | 120 | Edge detection |
-| Edge Dilation | 3 iterations | Better object connection |
 
 ### Why This Approach Works
 
@@ -493,137 +512,6 @@ exit
 
 ---
 
-## System Monitoring
-
-### Check All Services
-
-```bash
-# === EMR Cluster ===
-
-# HBase Thrift server
-netstat -tlnp | grep 9090
-
-# Speed Layer service
-bash ~/maurottito/speed_layer/status_live_camera.sh
-
-# Recent detections
-tail -20 ~/maurottito/logs/parking_live_camera.log | grep "Occupied"
-
-# === Web Server ===
-
-# Web app health
-curl -I http://localhost:3027/health
-
-# Test HBase connection
-curl http://localhost:3027/hbase-test
-```
-
-### Performance Metrics
-
-```bash
-# Speed Layer Performance
-grep "Frame extracted" ~/maurottito/logs/parking_live_camera.log | tail -10
-
-# HBase Update Success Rate
-grep "Successfully updated HBase" ~/maurottito/logs/parking_live_camera.log | wc -l
-grep "Failed to update" ~/maurottito/logs/parking_live_camera.log | wc -l
-
-# Detection Statistics
-grep "Advanced detection" ~/maurottito/logs/parking_live_camera.log | tail -20
-```
-
-### Typical Performance
-
-| Metric | Value | Notes |
-|--------|-------|-------|
-| Frame Extraction | ~200ms | HLS stream to frame |
-| Car Detection | ~5-10ms | OpenCV processing |
-| HBase Update | ~400ms | Network + write |
-| Total Cycle | <1 second | Per update |
-| Update Frequency | 60 seconds | Configurable |
-| Detection Accuracy | 85-95% | Varies by lighting/weather |
-
----
-
-## Troubleshooting
-
-### Problem: OpenCV Import Error
-
-```
-ImportError: libGL.so.1: cannot open shared object file
-```
-
-**Cause:** Regular opencv-python requires GUI libraries.
-
-**Solution:**
-```bash
-pip3 uninstall -y opencv-python
-pip3 install --user opencv-python-headless
-python3 ~/maurottito/speed_layer/auto_update_live_camera.py --test
-```
-
-### Problem: HBase Connection Timeout
-
-```
-Error updating HBase: TTransportException
-Error updating HBase: [Errno 32] Broken pipe
-```
-
-**Cause:** HBase connection timing out after inactivity.
-
-**Solution:** Already fixed in current auto_update_live_camera.py - creates fresh connection for each update.
-
-### Problem: Low Car Detection (Always 0-1 cars)
-
-**Cause:** Detection thresholds too strict.
-
-**Solution:** Already optimized with flexible thresholds (800-200000 pixels, aspect ratio 0.2-5.0).
-
-If still too low, edit auto_update_live_camera.py:
-```python
-# Line ~120: Even lower minimum
-if 500 < area < 250000:
-
-# Line ~113: More sensitive Canny
-edges = cv2.Canny(blurred, 20, 100)
-```
-
-### Problem: Web Page Not Loading
-
-**Diagnostic steps:**
-```bash
-# Is web server running?
-ps aux | grep "node app.js"
-
-# Is port 3027 open?
-netstat -tlnp | grep 3027
-
-# Test locally
-curl http://localhost:3027/home.html
-
-# Check logs for errors
-tail -50 ~/parking_spot_app_deploy/logs/parking_app_deploy.log
-```
-
-### Problem: Speed Layer Not Starting
-
-**Diagnostic steps:**
-```bash
-# Check if already running
-bash ~/maurottito/speed_layer/status_live_camera.sh
-
-# Check for port conflicts
-ps aux | grep python | grep auto_update
-
-# Check logs
-tail -100 ~/maurottito/logs/parking_live_camera.log
-
-# Test camera connection
-python3 ~/maurottito/speed_layer/auto_update_live_camera.py --test
-```
-
----
-
 ## Project Structure
 
 ```
@@ -701,181 +589,3 @@ find-parking-spot/
 - Manual update capability via forms
 - Health monitoring endpoints
 - RESTful API for integration
-
----
-
-## Quick Start Commands
-
-### Complete Deployment (Fresh Start)
-
-```bash
-# ===== STEP 1: EMR CLUSTER (Batch Layer) =====
-ssh hadoop@ec2-54-89-237-222.compute-1.amazonaws.com
-
-# Upload data to HDFS
-hdfs dfs -mkdir -p /tmp/maurottito/parking
-hdfs dfs -put ~/maurottito/data/parking_locations.csv /tmp/maurottito/parking/
-
-# Run batch layer deployment
-cd ~/maurottito
-bash run_batch_layer.sh
-
-# Verify HBase tables
-hbase shell
-scan 'maurottito_parking_locations', {LIMIT => 5}
-scan 'maurottito_parking_availability', {LIMIT => 5}
-exit
-
-
-# ===== STEP 2: EMR CLUSTER (Speed Layer) =====
-
-# Install Python dependencies
-pip3 install --user happybase opencv-python-headless numpy
-
-# Upload speed layer files via IntelliJ:
-# - auto_update_live_camera.py
-# - start_live_camera.sh
-# - stop_live_camera.sh
-# - status_live_camera.sh
-
-# Start live camera detection
-cd ~/maurottito/speed_layer
-chmod +x *.sh
-bash start_live_camera.sh
-
-# Monitor in real-time
-tail -f ~/maurottito/logs/parking_live_camera.log
-
-
-# ===== STEP 3: WEB SERVER (Serving Layer) =====
-ssh ec2-user@ec2-52-20-203-80.compute-1.amazonaws.com
-
-# Upload web app files via IntelliJ to ~/parking_spot_app_deploy/
-
-# Install dependencies and start
-cd ~/parking_spot_app_deploy/src
-npm install
-cd ..
-bash start_app.sh
-
-# Test locally
-curl http://localhost:3027/health
-curl http://localhost:3027/parking.html
-
-
-# ===== STEP 4: VERIFY IN BROWSER =====
-# Open: http://ec2-52-20-203-80.compute-1.amazonaws.com:3027/parking.html
-# Refresh every minute to see Millennium Park update
-```
-
----
-
-## Success Criteria Checklist
-
-Your system is fully operational when ALL of these are true:
-
-- Batch Layer: 5 parking locations loaded into HBase
-- HBase Tables: Both maurottito_parking_locations and maurottito_parking_availability exist
-- Speed Layer: Service running with valid PID
-- Frame Extraction: Logs show "Frame extracted successfully (1280x720)" every 60s
-- Car Detection: Logs show varied car counts (not stuck at 0-1)
-- Detection Range: Numbers between 0-12 cars detected
-- HBase Updates: "Successfully updated HBase" in logs (no errors)
-- Web Server: Responds to http://localhost:3027/health with "OK"
-- Web Page: Displays all 5 parking locations with data
-- Real-time Updates: Millennium Park (Location 1) changes every minute
-- Realistic Occupancy: 30-70% during business hours
-
----
-
-## Academic Context
-
-This project demonstrates a complete Lambda Architecture implementation for a Big Data application.
-
-### Architecture Patterns Demonstrated
-
-1. **Lambda Architecture** - Batch + Speed + Serving layers
-2. **MapReduce** - Hive data processing
-3. **NoSQL Storage** - HBase for real-time data
-4. **Stream Processing** - Real-time camera feed analysis
-5. **Machine Learning** - Computer vision car detection
-6. **RESTful APIs** - Web service architecture
-7. **Cloud Infrastructure** - AWS EMR & EC2
-
-### Learning Objectives Achieved
-
-- Distributed data processing with Hadoop ecosystem
-- Real-time stream processing and analytics
-- NoSQL database design and implementation
-- Machine learning integration in Big Data pipelines
-- Cloud infrastructure deployment and management
-- Full-stack application development
-- Production system monitoring and troubleshooting
-
----
-
-## Technical References
-
-### Live Camera Stream
-- **HLS Stream URL:** https://2-fss-2.streamhoster.com/pl_126/200612-1195858-1/playlist.m3u8
-- **Resolution:** 1280x720
-- **Format:** HLS (HTTP Live Streaming)
-- **Location:** Chicago, Illinois
-
-### Infrastructure
-- **EMR Cluster:** ec2-54-89-237-222.compute-1.amazonaws.com
-  - HBase Thrift: Port 9090
-  - HBase REST: Port 8070
-- **Web Server:** ec2-52-20-203-80.compute-1.amazonaws.com
-  - Application: Port 3027
-
-### Documentation
-- **OpenCV:** https://docs.opencv.org/
-- **HBase:** https://hbase.apache.org/book.html
-- **Apache Hive:** https://hive.apache.org/
-- **Node.js HBase Client:** https://github.com/wdavidw/node-hbase
-
----
-
-## System URLs
-
-**Live System Access:**
-
-Once deployed, access your system at:
-- **Main Application:** http://ec2-52-20-203-80.compute-1.amazonaws.com:3027/parking.html
-- **Home Page:** http://ec2-52-20-203-80.compute-1.amazonaws.com:3027/home.html
-- **Health Check:** http://ec2-52-20-203-80.compute-1.amazonaws.com:3027/health
-- **HBase Test:** http://ec2-52-20-203-80.compute-1.amazonaws.com:3027/hbase-test
-
----
-
-## Project Status
-
-**COMPLETE & FULLY OPERATIONAL**
-
-### All Three Lambda Architecture Layers Deployed
-
-1. **Batch Layer** - 5 Chicago parking locations loaded into HBase via Hive
-2. **Speed Layer** - Live camera detection running, updating every 60 seconds
-3. **Serving Layer** - Web application serving real-time data to users
-
-### System Metrics
-
-- **Uptime:** Continuous operation since deployment
-- **Update Frequency:** Every 60 seconds for Millennium Park
-- **Detection Accuracy:** 85-95% (varies by lighting conditions)
-- **Response Time:** <1 second per HBase query
-- **Data Consistency:** 100% (all updates atomic)
-
-Real-time parking availability using live camera feed with OpenCV computer vision.
-
----
-
-## Project Information
-
-**Technologies:** Hadoop • HBase • Hive • OpenCV • Python • Node.js • Express • AWS EMR • AWS EC2
-
----
-
-Project demonstrates a complete Big Data Lambda Architecture with real-time computer vision and distributed storage.
-
