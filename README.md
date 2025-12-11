@@ -27,7 +27,9 @@ A production-ready parking detection system that:
 ```
 find-parking-spot/
 ├── README.md                          # This comprehensive guide
+├── LICENSE                            # Project license
 ├── requirements.txt                   # Python dependencies
+├── .gitignore                         # Git ignore rules
 │
 ├── data/
 │   └── parking_locations.csv          # Source data (5 locations)
@@ -40,23 +42,34 @@ find-parking-spot/
 │   ├── auto_update_live_camera.py     # Live camera detection service
 │   ├── start_live_camera.sh           # Start script
 │   ├── stop_live_camera.sh            # Stop script
-│   └── status_live_camera.sh          # Status check
+│   ├── status_live_camera.sh          # Status check
+│   ├── deploy_live_camera.sh          # Deployment script
+│   ├── create_scripts.sh              # Script generator
+│   └── fix_opencv.sh                  # OpenCV troubleshooting
 │
-├── parking_spot_app_deploy/
-│   ├── src/
-│   │   ├── app.js                     # Node.js web server
-│   │   ├── package.json               # npm dependencies
-│   │   ├── home.mustache              # Home page template
-│   │   ├── parking-table.mustache     # Parking table template
-│   │   └── public/
-│   │       ├── elegant-aero.css       # Form styling
-│   │       └── table.css              # Table styling
-│   ├── start_app.sh                   # Web app start script
-│   └── logs/                          # Application logs
+├── parking_spot_app/
+│   ├── app.js                         # Node.js web server
+│   ├── package.json                   # npm dependencies
+│   ├── README.md                      # App-specific documentation
+│   ├── home.mustache                  # Home page template
+│   ├── map.mustache                   # Map view template
+│   ├── parking-table.mustache         # Parking table template
+│   ├── update.mustache                # Update page template
+│   ├── update-form.mustache           # Update form template
+│   ├── public/
+│   │   ├── elegant-aero.css           # Form styling
+│   │   ├── table.css                  # Table styling
+│   │   └── test.html                  # Test page
+│   ├── check-hbase-emr.sh             # HBase connectivity test
+│   ├── quick-deploy.sh                # Quick deployment script
+│   ├── stop-and-start.sh              # Restart script
+│   └── troubleshoot-tables.sh         # Table diagnostics
 │
 ├── run_batch_layer.sh                 # Batch layer deployment
-├── cleanup_and_retry.sh               # Cleanup & retry script
-└── create_availability_only.sh        # Create availability table
+├── check_hbase_tables.sh              # HBase table verification
+├── diagnose_hbase.sh                  # HBase diagnostics
+├── diagnose_browser_access.sh         # Browser access diagnostics
+└── restart_thrift.sh                  # Restart HBase Thrift server
 ```
 
 ---
