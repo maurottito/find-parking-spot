@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Update Parking Availability - Speed Layer</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" type="text/css" href="table.css">
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			margin: 0;
+			padding: 0;
+			background-color: #f5f5f5;
+		}
+
+		.header {
+			background-color: #4CAF50;
+			color: white;
+			padding: 15px 20px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+		}
+
+		.header h1 {
+			margin: 0;
+			font-size: 24px;
+			display: inline-block;
+		}
+
+		.nav-links {
+			float: right;
+			margin-top: 5px;
+		}
+
+		.nav-links a {
+			color: white;
+			text-decoration: none;
+			margin-left: 15px;
+			padding: 5px 12px;
+			background-color: rgba(255,255,255,0.2);
+			border-radius: 4px;
+			transition: background-color 0.3s;
+		}
+
+		.nav-links a:hover {
+			background-color: rgba(255,255,255,0.3);
+		}
+
+		.container {
+			max-width: 800px;
+			margin: 40px auto;
+			background-color: white;
+			padding: 30px;
+			border-radius: 8px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		}
+
+		.form-group {
+			margin-bottom: 25px;
+		}
+
+		label {
+			display: block;
+			margin-bottom: 8px;
+			font-weight: bold;
+			color: #333;
+		}
+
+		select, input[type="number"] {
+			width: 100%;
+			padding: 12px;
+			border: 2px solid #ddd;
+			border-radius: 4px;
+			font-size: 16px;
+			box-sizing: border-box;
+			transition: border-color 0.3s;
+		}
+
+		select:focus, input[type="number"]:focus {
+			outline: none;
+			border-color: #4CAF50;
+		}
+
+		button {
+			background-color: #4CAF50;
+			color: white;
+			padding: 12px 30px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 16px;
+			font-weight: bold;
+			transition: background-color 0.3s;
+		}
+
+		button:hover {
+			background-color: #45a049;
+		}
+
+		button:disabled {
+			background-color: #ccc;
+			cursor: not-allowed;
+		}
+
+		.message {
+			padding: 15px;
+			margin: 20px 0;
+			border-radius: 4px;
+			display: none;
+		}
+
+		.message.success {
+			background-color: #d4edda;
+			border: 1px solid #c3e6cb;
+			color: #155724;
+		}
+
+		.message.error {
+			background-color: #f8d7da;
+			border: 1px solid #f5c6cb;
+			color: #721c24;
+		}
+
+		.location-info {
+			background-color: #e7f3fe;
+			padding: 15px;
+			border-radius: 4px;
+			margin-top: 10px;
+			display: none;
+		}
+
+		.location-info p {
+			margin: 5px 0;
+			color: #0c5460;
+		}
+
+		.info-text {
+			background-color: #fff3cd;
+			border: 1px solid #ffeaa7;
+			color: #856404;
+			padding: 15px;
+			border-radius: 4px;
+			margin-bottom: 25px;
+		}
+
+		.info-text strong {
+			display: block;
+			margin-bottom: 5px;
+		}
+	</style>
+</head>
+<body>
+	<div class="header">
+		<h1>⚡ Speed Layer - Update Parking Availability</h1>
+		<div class="nav-links">
+			<a href="/home.html">🏠 Home</a>
+			<a href="/parking.html">📊 Table</a>
+			<a href="/map.html">🗺️ Map</a>
+		</div>
+		<div style="clear: both;"></div>
+	</div>
+
+	<div class="container">
+		<div class="info-text">
+			<strong>🚀 Real-Time Updates</strong>
+			Use this form to manually update parking availability. Changes are written directly to HBase and will appear immediately in the table and map views.
+		</div>
+
+		<form id="updateForm">
+			<div class="form-group">
+				<label for="location">Select Parking Location:</label>
+				<select id="location" name="location" required>
+					<option value="">-- Choose a location --</option>
+					{{#locations}}
+					<option value="{{location_id}}"
+						data-name="{{location_name}}"
+						data-total="{{total_spots}}"
+						data-lat="{{latitude}}"
+						data-lng="{{longitude}}">
+						{{location_name}} (ID: {{location_id}})
+					</option>
+					{{/locations}}
+				</select>
+			</div>
+
+			<div class="location-info" id="locationInfo">
+				<p><strong>Location:</strong> <span id="infoName"></span></p>
+				<p><strong>Total Spots:</strong> <span id="infoTotal"></span></p>
+				<p><strong>Coordinates:</strong> <span id="infoCoords"></span></p>
+			</div>
+
+			<div class="form-group">
+				<label for="available_spots">Available Spots:</label>
+				<input
+					type="number"
+					id="available_spots"
+					name="available_spots"
+					min="0"
+					placeholder="Enter number of available spots"
+					required>
+			</div>
+
+			<div class="message" id="message"></div>
+
+			<button type="submit" id="submitBtn">Update Availability</button>
+		</form>
+
+		<div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
+			<h3>Recent Updates</h3>
+			<div id="recentUpdates" style="color: #666; font-size: 14px;">
+				<p>No updates yet</p>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		const locationSelect = document.getElementById('location');
+		const locationInfo = document.getElementById('locationInfo');
+		const availableSpotsInput = document.getElementById('available_spots');
+		const updateForm = document.getElementById('updateForm');
+		const messageDiv = document.getElementById('message');
+		const submitBtn = document.getElementById('submitBtn');
+		const recentUpdatesDiv = document.getElementById('recentUpdates');
+
+		let updateHistory = [];
+
+		// Show location info when selected
+		locationSelect.addEventListener('change', function() {
+			// ...existing code...
+		});
+			const option = this.options[this.selectedIndex];
+			if (option.value) {
+				document.getElementById('infoName').textContent = option.dataset.name;
+				document.getElementById('infoTotal').textContent = option.dataset.total || 'N/A';
+				document.getElementById('infoCoords').textContent =
+					`${option.dataset.lat}, ${option.dataset.lng}`;
+				locationInfo.style.display = 'block';
+
+				// Set max value for input
+				if (option.dataset.total) {
+					availableSpotsInput.max = option.dataset.total;
+				}
+			} else {
+				locationInfo.style.display = 'none';
+			}
+		});
+
+		// Handle form submission
+		updateForm.addEventListener('submit', async function(e) {
+			e.preventDefault();
+
+			const locationId = locationSelect.value;
+			const availableSpots = parseInt(availableSpotsInput.value);
+
+			if (!locationId || isNaN(availableSpots)) {
+				showMessage('Please fill in all fields', 'error');
+				return;
+			}
+
+			// Disable button during submission
+			submitBtn.disabled = true;
+			submitBtn.textContent = 'Updating...';
+
+			try {
+				const response = await fetch('/update', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						location_id: locationId,
+						available_spots: availableSpots
+					})
+				});
+
+				const data = await response.json();
+
+				if (data.success) {
+					const locationName = locationSelect.options[locationSelect.selectedIndex].dataset.name;
+					showMessage(
+						`✅ Successfully updated ${locationName} to ${availableSpots} available spots!`,
+						'success'
+					);
+
+					// Add to history
+					addToHistory(locationName, locationId, availableSpots, data.timestamp);
+
+					// Reset form
+					updateForm.reset();
+					locationInfo.style.display = 'none';
+				} else {
+					showMessage('❌ Error: ' + data.message, 'error');
+				}
+			} catch (error) {
+				showMessage('❌ Network error: ' + error.message, 'error');
+			} finally {
+				submitBtn.disabled = false;
+				submitBtn.textContent = 'Update Availability';
+			}
+		});
+
+		function showMessage(text, type) {
+			messageDiv.textContent = text;
+			messageDiv.className = 'message ' + type;
+			messageDiv.style.display = 'block';
+
+			// Auto-hide success messages after 5 seconds
+			if (type === 'success') {
+				setTimeout(() => {
+					messageDiv.style.display = 'none';
+				}, 5000);
+			}
+		}
+
+		function addToHistory(name, id, spots, timestamp) {
+			const date = new Date(timestamp * 1000);
+			const timeStr = date.toLocaleString();
+
+			updateHistory.unshift({
+				name: name,
+				id: id,
+				spots: spots,
+				time: timeStr
+			});
+
+			// Keep only last 10 updates
+			if (updateHistory.length > 10) {
+				updateHistory = updateHistory.slice(0, 10);
+			}
+
+			// Update display
+			recentUpdatesDiv.innerHTML = updateHistory.map(update =>
+				`<p><strong>${update.name}</strong> (ID: ${update.id}) → ${update.spots} spots<br>
+				<small style="color: #999;">${update.time}</small></p>`
+			).join('');
+		}
+	</script>
+</body>
+</html>
+

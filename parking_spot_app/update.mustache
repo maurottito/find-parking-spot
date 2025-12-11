@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Update Parking Availability</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			margin: 0;
+			padding: 0;
+			background-color: #f5f5f5;
+			min-height: 100vh;
+		}
+
+		.container {
+			max-width: 600px;
+			margin: 50px auto;
+			background: white;
+			padding: 40px;
+			border-radius: 10px;
+			box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+		}
+
+		h1 {
+			color: #333;
+			margin-top: 0;
+			text-align: center;
+		}
+
+		.nav-links {
+			text-align: center;
+			margin-bottom: 30px;
+			padding-bottom: 20px;
+			border-bottom: 2px solid #eee;
+		}
+
+		.nav-links a {
+			color: #4CAF50;
+			text-decoration: none;
+			margin: 0 15px;
+			font-weight: bold;
+		}
+
+		.nav-links a:hover {
+			text-decoration: underline;
+		}
+
+		.form-group {
+			margin-bottom: 25px;
+		}
+
+		label {
+			display: block;
+			margin-bottom: 8px;
+			font-weight: bold;
+			color: #555;
+		}
+
+		select, input[type="number"] {
+			width: 100%;
+			padding: 12px;
+			border: 2px solid #ddd;
+			border-radius: 5px;
+			font-size: 16px;
+			box-sizing: border-box;
+			transition: border-color 0.3s;
+		}
+
+		select:focus, input[type="number"]:focus {
+			outline: none;
+			border-color: #4CAF50;
+		}
+
+		button {
+			width: 100%;
+			padding: 15px;
+			background-color: #4CAF50;
+			color: white;
+			border: none;
+			border-radius: 5px;
+			font-size: 18px;
+			font-weight: bold;
+			cursor: pointer;
+			transition: background-color 0.3s, transform 0.2s;
+		}
+
+		button:hover {
+			background-color: #45a049;
+			transform: translateY(-2px);
+			box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+		}
+
+		button:active {
+			transform: translateY(0);
+		}
+
+		button:disabled {
+			background: #ccc;
+			cursor: not-allowed;
+			transform: none;
+		}
+
+		.message {
+			padding: 15px;
+			margin: 20px 0;
+			border-radius: 5px;
+			display: none;
+			text-align: center;
+			font-weight: bold;
+		}
+
+		.message.success {
+			background-color: #d4edda;
+			color: #155724;
+			border: 1px solid #c3e6cb;
+		}
+
+		.message.error {
+			background-color: #f8d7da;
+			color: #721c24;
+			border: 1px solid #f5c6cb;
+		}
+
+		.info-box {
+			background: #f8f9fa;
+			padding: 15px;
+			border-radius: 5px;
+			margin-top: 15px;
+			display: none;
+		}
+
+		.info-box p {
+			margin: 5px 0;
+			color: #666;
+		}
+
+		.info-box strong {
+			color: #333;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<h1>🅿️ Update Parking Availability</h1>
+
+		<div class="nav-links">
+			<a href="/parking.html">📊 Table</a>
+			<a href="/map.html">🗺️ Map</a>
+		</div>
+
+		<form id="updateForm">
+			<div class="form-group">
+				<label for="location">Select Parking Location:</label>
+				<select id="location" name="location" required>
+					<option value="">-- Choose a location --</option>
+					{{#locations}}
+					<option value="{{location_id}}"
+						data-name="{{location_name}}"
+						data-total="{{total_spots}}">
+						{{location_name}} (ID: {{location_id}})
+					</option>
+					{{/locations}}
+				</select>
+			</div>
+
+			<div class="info-box" id="locationInfo">
+				<p><strong>Location:</strong> <span id="infoName"></span></p>
+				<p><strong>Total Capacity:</strong> <span id="infoTotal"></span> spots</p>
+				<p><strong>Current Available:</strong> <span id="infoCurrent">--</span> spots</p>
+			</div>
+
+			<div class="form-group">
+				<label for="available_spots">New Available Spots:</label>
+				<input
+					type="number"
+					id="available_spots"
+					name="available_spots"
+					min="0"
+					placeholder="Enter number of available spots"
+					required>
+			</div>
+
+			<div class="message" id="message"></div>
+
+			<button type="submit" id="submitBtn">💾 Update Availability</button>
+		</form>
+	</div>
+
+	<script>
+		const locationSelect = document.getElementById('location');
+		const locationInfo = document.getElementById('locationInfo');
+		const availableSpotsInput = document.getElementById('available_spots');
+		const updateForm = document.getElementById('updateForm');
+		const messageDiv = document.getElementById('message');
+		const submitBtn = document.getElementById('submitBtn');
+
+		// Show location info when selected
+		locationSelect.addEventListener('change', function() {
+			const option = this.options[this.selectedIndex];
+			if (option.value) {
+				document.getElementById('infoName').textContent = option.dataset.name;
+				document.getElementById('infoTotal').textContent = option.dataset.total || 'N/A';
+				locationInfo.style.display = 'block';
+
+				// Set max value
+				if (option.dataset.total) {
+					availableSpotsInput.max = option.dataset.total;
+				}
+			} else {
+				locationInfo.style.display = 'none';
+			}
+		});
+
+		// Handle form submission
+		updateForm.addEventListener('submit', async function(e) {
+			e.preventDefault();
+
+			const locationId = locationSelect.value;
+			const availableSpots = parseInt(availableSpotsInput.value);
+
+			if (!locationId || isNaN(availableSpots)) {
+				showMessage('Please fill in all fields', 'error');
+				return;
+			}
+
+			// Disable button
+			submitBtn.disabled = true;
+			submitBtn.textContent = '⏳ Updating...';
+
+			try {
+				const response = await fetch('/update', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						location_id: locationId,
+						available_spots: availableSpots
+					})
+				});
+
+				const data = await response.json();
+
+				if (data.success) {
+					const locationName = locationSelect.options[locationSelect.selectedIndex].dataset.name;
+					showMessage(
+						`✅ Success! ${locationName} updated to ${availableSpots} available spots`,
+						'success'
+					);
+
+					// Update current info
+					document.getElementById('infoCurrent').textContent = availableSpots;
+
+					// Reset form after short delay
+					setTimeout(() => {
+						updateForm.reset();
+						locationInfo.style.display = 'none';
+						messageDiv.style.display = 'none';
+					}, 3000);
+				} else {
+					showMessage('❌ Error: ' + data.message, 'error');
+				}
+			} catch (error) {
+				showMessage('❌ Network error: ' + error.message, 'error');
+			} finally {
+				submitBtn.disabled = false;
+				submitBtn.textContent = '💾 Update Availability';
+			}
+		});
+
+		function showMessage(text, type) {
+			messageDiv.textContent = text;
+			messageDiv.className = 'message ' + type;
+			messageDiv.style.display = 'block';
+		}
+	</script>
+</body>
+</html>
+

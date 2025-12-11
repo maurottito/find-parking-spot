@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Parking Spot Availability - Chicago</title>
+	<link rel="stylesheet" type="text/css" href="table.css">
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			margin: 20px;
+			background-color: #f5f5f5;
+		}
+		h1 {
+			color: #333;
+			text-align: center;
+		}
+		.container {
+			max-width: 1200px;
+			margin: 0 auto;
+			background-color: white;
+			padding: 20px;
+			border-radius: 8px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		}
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-top: 20px;
+		}
+		th, td {
+			padding: 12px;
+			text-align: left;
+			border-bottom: 1px solid #ddd;
+		}
+		th {
+			background-color: #4CAF50;
+			color: white;
+			font-weight: bold;
+		}
+		tr:hover {
+			background-color: #f5f5f5;
+		}
+		.available {
+			color: #4CAF50;
+			font-weight: bold;
+		}
+		.low {
+			color: #ff9800;
+			font-weight: bold;
+		}
+		.full {
+			color: #f44336;
+			font-weight: bold;
+		}
+		.back-link {
+			display: inline-block;
+			margin-bottom: 20px;
+			color: #4CAF50;
+			text-decoration: none;
+		}
+		.back-link:hover {
+			text-decoration: underline;
+		}
+		.last-updated {
+			font-size: 0.9em;
+			color: #666;
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<a href="/map.html" class="back-link">🗺️ Map View</a>
+		<a href="/update.html" class="back-link" style="margin-left: 20px;">✏️ Update</a>
+		<h1>Real-Time Parking Availability</h1>
+		<p style="text-align: center; color: #666;">Chicago Parking Locations</p>
+		
+		<table>
+			<thead>
+				<tr>
+					<th>Location ID</th>
+					<th>Location Name</th>
+					<th>Latitude</th>
+					<th>Longitude</th>
+					<th>Total Spots</th>
+					<th>Available Spots</th>
+					<th>Last Updated</th>
+				</tr>
+			</thead>
+			<tbody>
+				{{#locations}}
+				<tr>
+					<td>{{location_id}}</td>
+					<td>{{location_name}}</td>
+					<td>{{latitude}}</td>
+					<td>{{longitude}}</td>
+					<td>{{total_spots}}</td>
+					<td class="{{#available_spots}}{{#total_spots}}{{#available_spots}}{{^total_spots}}full{{/total_spots}}{{/available_spots}}{{/total_spots}}{{/available_spots}}">
+						{{available_spots}}
+					</td>
+					<td class="last-updated">{{last_updated}}</td>
+				</tr>
+				{{/locations}}
+			</tbody>
+		</table>
+	</div>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# Ignore node modules and logs for the parking_spot_app folder
+node_modules/
+
+# macOS
+.DS_Store
+
+# IDE / Editor
+.idea/
+*.iml
+
+# Logs
+server.log
+*.log
+npm-debug.log
+
+# Local env files
+.env
+.env.local
+
+# Optional artifacts
+coverage/
+
+# Ignore temporarily uploaded files from IDE deployment tools
+*.tmp
+*.swp
+

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Parking Map - Chicago</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<!-- Leaflet CSS -->
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+		integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+		crossorigin=""/>
+
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+			font-family: Arial, sans-serif;
+		}
+
+		#header {
+			background-color: #4CAF50;
+			color: white;
+			padding: 15px 20px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+			position: relative;
+			z-index: 1000;
+		}
+
+		#header h1 {
+			margin: 0;
+			font-size: 24px;
+			display: inline-block;
+		}
+
+		.nav-links {
+			float: right;
+			margin-top: 5px;
+		}
+
+		.nav-links a {
+			color: white;
+			text-decoration: none;
+			margin-left: 20px;
+			padding: 5px 15px;
+			background-color: rgba(255,255,255,0.2);
+			border-radius: 4px;
+			transition: background-color 0.3s;
+		}
+
+		.nav-links a:hover {
+			background-color: rgba(255,255,255,0.3);
+		}
+
+		#map {
+			height: 600px;
+			width: 100%;
+		}
+
+		.legend {
+			background: white;
+			padding: 10px;
+			border-radius: 5px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+			line-height: 24px;
+		}
+
+		.legend i {
+			width: 18px;
+			height: 18px;
+			float: left;
+			margin-right: 8px;
+			border-radius: 50%;
+		}
+
+		.legend-title {
+			font-weight: bold;
+			margin-bottom: 5px;
+		}
+
+		.available { background-color: #4CAF50; }
+		.low { background-color: #ff9800; }
+		.full { background-color: #f44336; }
+
+		.popup-content {
+			min-width: 200px;
+		}
+
+		.popup-content h3 {
+			margin: 0 0 10px 0;
+			color: #333;
+		}
+
+		.popup-content p {
+			margin: 5px 0;
+			font-size: 14px;
+		}
+
+		.popup-content .spots {
+			font-size: 18px;
+			font-weight: bold;
+			padding: 10px;
+			text-align: center;
+			border-radius: 4px;
+			margin: 10px 0;
+		}
+	</style>
+</head>
+<body>
+	<div id="header">
+		<h1>🗺️ Chicago Parking Map</h1>
+		<div class="nav-links">
+			<a href="/parking.html">📊 Table View</a>
+			<a href="/update.html">✏️ Update</a>
+		</div>
+		<div style="clear: both;"></div>
+	</div>
+
+	<div id="map"></div>
+
+	<!-- Leaflet JavaScript -->
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+		integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+		crossorigin=""></script>
+
+	<script>
+		// Initialize the map - centered on Chicago
+		var map = L.map('map').setView([41.8781, -87.6298], 12);
+
+		// Add OpenStreetMap tiles
+		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			attribution: '© OpenStreetMap contributors',
+			maxZoom: 19
+		}).addTo(map);
+
+		// Parking location data from server
+		var locations = {{{locationsJson}}};
+
+		console.log('Loaded ' + locations.length + ' parking locations');
+
+		// Function to determine marker color based on availability
+		function getMarkerColor(available, total) {
+			if (!total || total == 0) return '#999';
+			var ratio = available / total;
+			if (ratio > 0.3) return '#4CAF50'; // Green - plenty available
+			if (ratio > 0.1) return '#ff9800'; // Orange - low availability
+			return '#f44336'; // Red - full or almost full
+		}
+
+		// Function to get availability status text
+		function getAvailabilityStatus(available, total) {
+			if (!total || total == 0) return 'Unknown';
+			var ratio = available / total;
+			if (ratio > 0.3) return 'Available';
+			if (ratio > 0.1) return 'Low Availability';
+			return 'Almost Full';
+		}
+
+		// Add markers for each parking location
+		var markers = [];
+		var bounds = [];
+
+		locations.forEach(function(loc) {
+			var lat = parseFloat(loc.latitude);
+			var lng = parseFloat(loc.longitude);
+			var available = parseInt(loc.available_spots) || 0;
+			var total = parseInt(loc.total_spots) || 0;
+
+			// Skip if no valid coordinates
+			if (isNaN(lat) || isNaN(lng)) {
+				console.warn('Invalid coordinates for location:', loc.location_id);
+				return;
+			}
+
+			bounds.push([lat, lng]);
+
+			var color = getMarkerColor(available, total);
+			var status = getAvailabilityStatus(available, total);
+
+			// Create custom icon
+			var icon = L.divIcon({
+				className: 'custom-marker',
+				html: '<div style="background-color: ' + color + '; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px;">' +
+					(total > 0 ? available : '?') +
+				'</div>',
+				iconSize: [30, 30],
+				iconAnchor: [15, 15]
+			});
+
+			// Create marker
+			var marker = L.marker([lat, lng], { icon: icon }).addTo(map);
+
+			// Create popup content
+			var popupContent = `
+				<div class="popup-content">
+					<h3>${loc.location_name || 'Parking Location #' + loc.location_id}</h3>
+					<p><strong>Location ID:</strong> ${loc.location_id}</p>
+					<p><strong>Address:</strong> ${loc.latitude}, ${loc.longitude}</p>
+					<div class="spots" style="background-color: ${color}; color: white;">
+						${available} / ${total} spots available
+					</div>
+					<p><strong>Status:</strong> ${status}</p>
+					${loc.timestamp ? '<p><small>Last updated: ' + new Date(loc.timestamp * 1000).toLocaleString() + '</small></p>' : ''}
+				</div>
+			`;
+
+			marker.bindPopup(popupContent);
+			markers.push(marker);
+		});
+
+		// Fit map to show all markers
+		if (bounds.length > 0) {
+			map.fitBounds(bounds, { padding: [50, 50] });
+		} else {
+			console.warn('No valid parking locations found on map');
+		}
+
+		// Add legend
+		var legend = L.control({position: 'bottomright'});
+
+		legend.onAdd = function (map) {
+			var div = L.DomUtil.create('div', 'legend');
+			div.innerHTML = `
+				<div class="legend-title">Availability</div>
+				<div><i class="available"></i> Available (30%+)</div>
+				<div><i class="low"></i> Low (10-30%)</div>
+				<div><i class="full"></i> Almost Full (<10%)</div>
+				<div style="margin-top: 10px; font-size: 12px;">
+					<strong>Total Locations:</strong> ${locations.length}
+				</div>
+			`;
+			return div;
+		};
+
+		legend.addTo(map);
+
+		// Add refresh button
+		var refreshControl = L.control({position: 'topright'});
+
+		refreshControl.onAdd = function(map) {
+			var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+			div.innerHTML = '<a href="#" title="Refresh" style="background: white; padding: 5px 10px; text-decoration: none; display: block;">🔄 Refresh</a>';
+			div.onclick = function() {
+				location.reload();
+				return false;
+			};
+			return div;
+		};
+
+		refreshControl.addTo(map);
+
+		console.log('Map initialized with ' + markers.length + ' markers');
+	</script>
+</body>
+</html>
+

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>HBase Connection Test</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			max-width: 800px;
+			margin: 50px auto;
+			padding: 20px;
+		}
+		.test-result {
+			padding: 15px;
+			margin: 10px 0;
+			border-radius: 5px;
+		}
+		.success {
+			background-color: #d4edda;
+			border: 1px solid #c3e6cb;
+			color: #155724;
+		}
+		.error {
+			background-color: #f8d7da;
+			border: 1px solid #f5c6cb;
+			color: #721c24;
+		}
+		.info {
+			background-color: #d1ecf1;
+			border: 1px solid #bee5eb;
+			color: #0c5460;
+		}
+		pre {
+			background-color: #f4f4f4;
+			padding: 10px;
+			border-radius: 3px;
+			overflow-x: auto;
+		}
+		button {
+			background-color: #4CAF50;
+			color: white;
+			padding: 10px 20px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 16px;
+		}
+		button:hover {
+			background-color: #45a049;
+		}
+	</style>
+</head>
+<body>
+	<h1>🔍 HBase Connection & Data Test</h1>
+	<p>This page will help diagnose issues with the parking table.</p>
+
+	<button onclick="runTests()">Run Diagnostic Tests</button>
+
+	<div id="results"></div>
+
+	<script>
+		async function runTests() {
+			const resultsDiv = document.getElementById('results');
+			resultsDiv.innerHTML = '<div class="info">Running tests...</div>';
+
+			let html = '';
+
+			// Test 1: Health check
+			html += '<h2>Test 1: Server Health Check</h2>';
+			try {
+				const response = await fetch('/health');
+				const data = await response.text();
+				html += `<div class="test-result success">✅ Server is healthy: ${data}</div>`;
+			} catch (error) {
+				html += `<div class="test-result error">❌ Server health check failed: ${error.message}</div>`;
+			}
+
+			// Test 2: Fetch parking data
+			html += '<h2>Test 2: Fetch Parking Data</h2>';
+			try {
+				const response = await fetch('/parking.html');
+				const text = await response.text();
+
+				if (response.ok) {
+					if (text.includes('Error')) {
+						html += `<div class="test-result error">❌ Error in response:<pre>${text.substring(0, 500)}</pre></div>`;
+					} else if (text.includes('Location ID')) {
+						html += `<div class="test-result success">✅ Parking data loaded successfully!</div>`;
+						html += `<div class="test-result info">Page preview:<pre>${text.substring(0, 300)}...</pre></div>`;
+					} else {
+						html += `<div class="test-result error">⚠️ Unexpected response (might be empty table)</div>`;
+					}
+				} else {
+					html += `<div class="test-result error">❌ HTTP ${response.status}: ${response.statusText}</div>`;
+				}
+			} catch (error) {
+				html += `<div class="test-result error">❌ Failed to fetch parking data: ${error.message}</div>`;
+			}
+
+			// Test 3: Check HBase endpoint (if accessible)
+			html += '<h2>Test 3: Recommendations</h2>';
+			html += `<div class="test-result info">
+				<strong>Next steps:</strong><br>
+				1. Check server logs: <code>pm2 logs maurottito_app</code><br>
+				2. Verify HBase tables exist: <code>hbase shell</code> then <code>list</code><br>
+				3. Check table data: <code>scan 'maurottito_parking_locations', {LIMIT => 5}</code><br>
+				4. Verify HBase connection in server logs
+			</div>`;
+
+			resultsDiv.innerHTML = html;
+		}
+	</script>
+
+	<hr style="margin-top: 40px;">
+	<p><a href="/home.html">← Back to Home</a> | <a href="/parking.html">View Parking Table →</a></p>
+</body>
+</html>
+
